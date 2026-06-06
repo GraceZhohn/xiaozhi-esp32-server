@@ -205,6 +205,7 @@ def _start_background_sender(conn: "ConnectionHandler", rate_controller, flow_co
             raise asyncio.CancelledError("客户端已中止")
 
         conn.last_activity_time = time.time() * 1000
+        conn.proactive_triggered = False  # 重置主动触发标志
         await _do_send_audio(conn, packet, flow_control)
 
     # 使用 start_sending 启动后台循环
@@ -229,6 +230,7 @@ async def _send_audio_with_rate_control(
             return
 
         conn.last_activity_time = time.time() * 1000
+        conn.proactive_triggered = False  # 重置主动触发标志
 
         # 预缓冲：前N个包直接发送
         if flow_control["packet_count"] < PRE_BUFFER_COUNT:

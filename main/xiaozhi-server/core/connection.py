@@ -180,6 +180,8 @@ class ConnectionHandler:
                 int(self.config.get("close_connection_no_voice_time", 120)) + 60
         )  # 在原来第一道关闭的基础上加60秒，进行二道关闭
         self.timeout_task = None
+        self.proactive_trigger_seconds = int(self.config.get("proactive_trigger_time", 30))
+        self.proactive_triggered = False  # 标记是否已经触发过主动互动
 
         # {"mcp":true} 表示启用MCP功能
         self.features = None
@@ -1541,7 +1543,7 @@ class ConnectionHandler:
             self.logger.bind(tag=TAG).error(f"Chat and close error: {str(e)}")
 
     async def _check_timeout(self):
-        """检查连接超时"""
+        """检查连接超时和主动触发"""
         try:
             while not self.stop_event.is_set():
                 last_activity_time = self.last_activity_time
@@ -1551,7 +1553,24 @@ class ConnectionHandler:
                 # 检查是否超时（只有在时间戳已初始化的情况下）
                 if last_activity_time > 0.0:
                     current_time = time.time() * 1000
-                    if current_time - last_activity_time > self.timeout_seconds * 1000:
+                    elapsed_seconds = (current_time - last_activity_time) / 1000
+
+                    # 20秒无交互时，主动触发大模型
+                    if (
+                        not self.proactive_triggered
+                        and elapsed_seconds > self.proactive_trigger_seconds
+                    ):
+                        self.proactive_triggered = True
+                        self.logger.bind(tag=TAG).info(
+                            f"用户已{self.proactive_trigger_seconds}秒无交互，主动触发大模型"
+                        )
+                        # 在线程池中执行chat，避免阻塞超时检查任务
+                        self.executor.submit(
+                            self.chat, "（用户已20s无回复）"
+                        )
+
+                    # 检查是否达到关闭连接的超时时间
+                    if elapsed_seconds > self.timeout_seconds:
                         if not self.stop_event.is_set():
                             self.logger.bind(tag=TAG).info("连接超时，准备关闭")
                             # 设置停止事件，防止重复处理
@@ -1564,8 +1583,8 @@ class ConnectionHandler:
                                     f"超时关闭连接时出错: {close_error}"
                                 )
                         break
-                # 每10秒检查一次，避免过于频繁
-                await asyncio.sleep(10)
+                # 每5秒检查一次，提高响应速度
+                await asyncio.sleep(5)
         except Exception as e:
             self.logger.bind(tag=TAG).error(f"超时检查任务出错: {e}")
         finally:

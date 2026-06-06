@@ -49,6 +49,7 @@ class ListenTextMessageHandler(TextMessageHandler):
             conn.reset_audio_states()
             if "text" in msg_json:
                 conn.last_activity_time = time.time() * 1000
+                conn.proactive_triggered = False  # 重置主动触发标志
                 original_text = msg_json["text"]  # 保留原始文本
                 filtered_len, filtered_text = remove_punctuation_and_length(
                     original_text

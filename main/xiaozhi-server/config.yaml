@@ -59,6 +59,8 @@ log:
 delete_audio: true
 # 没有语音输入多久后断开连接(秒)，默认2分钟，即120秒
 close_connection_no_voice_time: 120
+# 用户无交互多少秒后主动触发大模型(秒)，默认20秒
+proactive_trigger_time: 30
 # TTS请求超时时间(秒)
 tts_timeout: 10
 # 工具调用超时时间(秒)

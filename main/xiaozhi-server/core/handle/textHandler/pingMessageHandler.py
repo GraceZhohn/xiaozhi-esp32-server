@@ -32,6 +32,7 @@ class PingMessageHandler(TextMessageHandler):
         try:
             conn.logger.debug(f"收到PING消息，发送PONG响应")
             conn.last_activity_time = time.time() * 1000
+            conn.proactive_triggered = False  # 重置主动触发标志
             # 构造PONG响应消息
             pong_message = {
                 "type": "pong",

@@ -99,6 +99,7 @@ async def startToChat(conn: "ConnectionHandler", text):
 async def no_voice_close_connect(conn: "ConnectionHandler", have_voice):
     if have_voice:
         conn.last_activity_time = time.time() * 1000
+        conn.proactive_triggered = False  # 重置主动触发标志
         return
     # 只有在已经初始化过时间戳的情况下才进行超时检查
     if conn.last_activity_time > 0.0:
